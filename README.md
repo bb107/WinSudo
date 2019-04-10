@@ -33,5 +33,5 @@ sudo.exe 程序名 参数...
 * Strict parameter checking to avoid memory violations
 * 严格的参数检查,尽量避免内存违规
 
-## Program run screenshot (程序运行截图)
+## Screenshot of the program running (程序运行的截图)
 ![alt text](screenshots/sudo.png?raw=true "sudo")
