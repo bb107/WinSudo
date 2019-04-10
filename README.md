@@ -1,16 +1,17 @@
 # WinSudo
-Execute commands as local system.
+Execute commands as local system.</br>
+以本地系统上下文执行命令.
 
 [![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/996icu/996.ICU/blob/master/LICENSE)
 
-**Warning: Please use this program with caution, especially calling the PrivilegeHelps library.**
+**Warning: Please use this program with caution, especially calling the PrivilegeHelps library.**</br>
 **警告:请谨慎使用本程序,尤其是调用PrivilegeHelps库.
 
 ## Usage  用法
-'''
+```
 sudo.exe program args...
 sudo.exe 程序名 参数...
-'''
+```
 
 ## defects  缺陷
 * **Cannot inherit the current console window under Windows7**
