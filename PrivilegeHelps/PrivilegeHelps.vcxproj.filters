@@ -1,0 +1,83 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="源文件">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="头文件">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="资源文件">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="源文件\Se">
+      <UniqueIdentifier>{08ef77b5-7a96-48d5-9ff6-f86173e07862}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\Ps">
+      <UniqueIdentifier>{cf0eefc8-e779-4661-97d0-58a814494663}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\Rtl">
+      <UniqueIdentifier>{6b84e4e3-acd9-4a64-a1bb-a9fc4e5ce754}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\Nt">
+      <UniqueIdentifier>{5229191c-d4e4-4a3c-ab83-77dc99065da6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="头文件\Nt">
+      <UniqueIdentifier>{57128698-9544-4a0c-b4ff-f18a8843f3fb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="头文件\Ps">
+      <UniqueIdentifier>{5c1ef837-6761-4eab-805f-c467b9705954}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="头文件\Se">
+      <UniqueIdentifier>{6a11cc70-d66e-4937-afc1-6197270c7e5f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="头文件\Rtl">
+      <UniqueIdentifier>{6c53916a-61e7-44ba-bcd3-0f0df4faaced}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="dllmain.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Security.cpp">
+      <Filter>源文件\Se</Filter>
+    </ClCompile>
+    <ClCompile Include="Native.cpp">
+      <Filter>源文件\Nt</Filter>
+    </ClCompile>
+    <ClCompile Include="Process.cpp">
+      <Filter>源文件\Ps</Filter>
+    </ClCompile>
+    <ClCompile Include="Runtime.cpp">
+      <Filter>源文件\Rtl</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="m.def">
+      <Filter>资源文件</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="bstatus.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="bsdef.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Native.h">
+      <Filter>头文件\Nt</Filter>
+    </ClInclude>
+    <ClInclude Include="Process.h">
+      <Filter>头文件\Ps</Filter>
+    </ClInclude>
+    <ClInclude Include="Security.h">
+      <Filter>头文件\Se</Filter>
+    </ClInclude>
+    <ClInclude Include="Runtime.h">
+      <Filter>头文件\Rtl</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

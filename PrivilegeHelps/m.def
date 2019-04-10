@@ -1,0 +1,36 @@
+EXPORTS
+
+SeInitialDll	@1
+SeReleaseDll	@2
+
+SeCreateUserTokenExA	@3
+SeCreateUserTokenA	@4
+
+SeEnablePrivilegesToken	@5
+SePrivilegeEscalationThread	@6
+
+SeReferenceProcess	@7
+SeReferenceThread	@8
+
+SeReferenceProcessPrimaryToken	@9
+SeReferenceThreadToken	@10
+
+SeEnumLogonSessionsLuid	@11
+SeQueryLogonSessionInformation	@12
+SeFreeLogonSessionData	@13
+
+RtlTokenPrivilegesToPrivilegeValue	@14
+RtlPrivilegeValueToTokenPrivileges	@15
+
+RtlTokenGroupsToGroupsA	@16
+RtlGroupsToTokenGroupsA	@17
+
+SeQueryInformationToken	@18
+SeReferenceUserNameA	@19
+SeReferenceSidA	@20
+SeFreeAllocate	@21
+
+SeReferenceEscalationToken	@22
+SeDereferenceEscalationToken	@23
+
+SeSetInformationToken	@24
