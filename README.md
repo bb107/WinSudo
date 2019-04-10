@@ -15,4 +15,4 @@ Execute commands as local system.
 * User name and group name are submitted using LPCSTR, which is convenient to call.
 * 用户名和组名使用LPCSTR提交,方便调用
 
-[![alt text]](screenshots/sudo.png?raw=true "sudo")
+![alt text](screenshots/sudo.png?raw=true "sudo")
