@@ -2,25 +2,7 @@
 #include <cstdio>
 #include <ctime>
 #include "../PrivilegeHelps/bsdef.h"
-#define DUPLICATE_SAME_ATTRIBUTES 0x00000004
-FARPROC WINAPI GetNtProcAddress(LPCSTR func_name) {
-	return GetProcAddress(GetModuleHandleA("ntdll.dll"), func_name);
-}
-LPCSTR proc = "NtDuplicateObject";
-NTSTATUS __declspec(naked) NTAPI NtDuplicateObject(
-	IN HANDLE               SourceProcessHandle,
-	IN HANDLE               SourceHandle,
-	IN HANDLE               TargetProcessHandle,
-	OUT PHANDLE             TargetHandle,
-	IN ACCESS_MASK          DesiredAccess OPTIONAL,
-	IN BOOLEAN              InheritHandle,
-	IN ULONG                Options) {
-	__asm {
-		push proc;
-		call GetNtProcAddress;
-		jmp eax;
-	}
-}
+#include "../PrivilegeHelps/Native.h"
 
 int wmain(int argc, wchar_t *argv[]) {
 	if (argc <= 1) {
