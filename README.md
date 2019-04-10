@@ -3,4 +3,16 @@ Execute commands as local system.
 
 [![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/996icu/996.ICU/blob/master/LICENSE)
 
-![alt text](screenshots/sudo.png?raw=true "sudo")
+* **process need to be elevated**
+* **进程需要提升**
+
+* All enabled privileges are enabled by default
+* 默认开启所有能启用的特权
+
+* Can create an access token just like calling winapi, which can contain any privileges and any attributes for any user group.
+* 可以像调用winapi一样创建访问令牌,可以包含任意特权和任意用户组任意属性
+
+* User name and group name are submitted using LPCSTR, which is convenient to call.
+* 用户名和组名使用LPCSTR提交,方便调用
+
+[![alt text]](screenshots/sudo.png?raw=true "sudo")
