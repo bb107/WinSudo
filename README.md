@@ -33,5 +33,19 @@ sudo.exe 程序名 参数...
 * Strict parameter checking to avoid memory violations
 * 严格的参数检查,尽量避免内存违规
 
+## Project list (项目列表)
+* PrivilegeHelps</br>
+Provide APIs such as creating access tokens.</br>
+提供创建访问令牌等API
+* sudo</br>
+Create a process with local system permissions using the PrivilegeHelps library.</br>
+使用PrivilegeHelps库创建具有本地系统权限的进程
+* cmder</br>
+The process created by the `CreateProcessWithTokenW` function assigns a new console by default, and the cmder will reattach the original console to achieve in-place promotion.</br>
+`CreateProcessWithTokenW`函数创建的进程默认分配新控制台,cmder将重新附加原来的控制台,以实现原地提升.</br></br>
+
+However, the standard output handle cannot be copied under Windows 7, and the additional source console cannot be implemented.</br>
+但是,在Windows7下无法复制标准输出句柄,不能实现附加源控制台.
+
 ## Screenshot of the program running (程序运行的截图)
 ![alt text](screenshots/sudo.png?raw=true "sudo")
