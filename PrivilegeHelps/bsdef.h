@@ -1,4 +1,5 @@
 #pragma once
+#include <Windows.h>
 #include "bstatus.h"
 #include <ntsecapi.h>
 #define BSAPI __stdcall
