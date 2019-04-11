@@ -34,3 +34,8 @@ SeReferenceEscalationToken	@22
 SeDereferenceEscalationToken	@23
 
 SeSetInformationToken	@24
+
+SeSingleGroupsAddNameA	@25
+SeSingleGroupsAddSid	@26
+SeSingleTokenGroupsAddNameA	@27
+SeSingleTokenGroupsAddSid	@28

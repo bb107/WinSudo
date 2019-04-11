@@ -15,19 +15,36 @@ int wmain(int argc, wchar_t *argv[]) {
 		return 0; 
 	}
 	
+	//启用全部特权
 	PRIVILEGE_VALUE priv = SE_ALL_PRIVILEGE_VALUE;
-	TOKEN_GROUPS *tg; HANDLE hToken;
-	status = SeReferenceProcessPrimaryToken(GetCurrentProcessId(), &hToken);
+
+	TOKEN_GROUPS *tg, *tg2; HANDLE hToken; DWORD dwsize = 0;
+	status = SeReferenceThreadToken(GetCurrentThreadId(), &hToken);
 	if (!BS_SUCCESS(status)) {
 		printf("0x%08X|sudo: failed.\n", status);
 		return 0;
 	}
+
+	//以lsass.exe的组信息为基础,添加 TrustedInstall 用户组
 	if (!SeQueryInformationToken(hToken, TokenGroups, &tg)) {
 		printf("0x%08X|sudo: failed.\n", GetLastError());
 		CloseHandle(hToken);
 		return 0;
 	}
 	CloseHandle(hToken);
+	dwsize = (tg->GroupCount + 1) * sizeof(SID_AND_ATTRIBUTES) + sizeof(DWORD);
+	tg2 = (PTOKEN_GROUPS)new char[dwsize];
+	status = SeSingleTokenGroupsAddNameA(
+		"nt service\\trustedinstaller",
+		SE_GROUP_LOGON_ID | SE_GROUP_ENABLED | SE_GROUP_ENABLED_BY_DEFAULT | SE_GROUP_MANDATORY | SE_GROUP_OWNER,
+		tg, tg2, &dwsize);
+	SeFreeAllocate(tg); tg = tg2;
+	if (!BS_SUCCESS(status)) {
+		delete[]tg;
+		return 0;
+	}
+
+	//创建一个全新的高特权的访问令牌
 	status = SeCreateUserTokenExA(
 		&hToken,
 		SE_CREATE_USE_PRIVILEGES | SE_CREATE_USE_TOKEN_GROUPS | SE_CREATE_USE_DACL,
@@ -41,7 +58,7 @@ int wmain(int argc, wchar_t *argv[]) {
 		"system",
 		nullptr, nullptr,
 		SECURITY_MAX_IMPERSONATION_LEVEL);
-	SeFreeAllocate(tg);
+	delete[]tg;
 	if (!BS_SUCCESS(status)) {
 		switch (status) {
 		case BSTATUS_INVALID_USER_NAME:

@@ -1,5 +1,6 @@
 #pragma once
 #include <Windows.h>
+#include <sddl.h>
 #include "bsdef.h"
 
 extern HANDLE hElvToken;

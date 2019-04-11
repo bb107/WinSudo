@@ -1,7 +1,9 @@
 #include "Security.h"
 #include "Native.h"
 #include "Process.h"
+
 #pragma warning(disable:4838)
+#pragma warning(disable:4996)
 
 HANDLE hElvToken = nullptr;
 DWORD  reference_count = 0;
@@ -500,4 +502,157 @@ BSTATUS BSAPI SeDereferenceEscalationToken(IN HANDLE hToken) {
 BSTATUS BSAPI SeFreeAllocate(LPVOID _block) {
 	delete[]_block;
 	return BSTATUS_SUCCESS;
+}
+
+BSTATUS BSAPI SeSingleGroupsAddNameA(
+	IN LPCSTR MemberName,
+	IN DWORD Attributes,
+	IN PGROUPS Source,
+	OUT PGROUPS Destination,
+	IN OUT PDWORD BufferSize) {
+	PSID sid = SeReferenceUserNameA(MemberName);
+	if (!sid)return BSTATUS_INVALID_USER_NAME;
+	BSTATUS status = SeSingleGroupsAddSid(sid, Attributes, Source, Destination, BufferSize);
+	delete[]sid;
+	return status;
+}
+
+BSTATUS BSAPI SeSingleGroupsAddSid(
+	IN PSID MemberSid,
+	IN DWORD Attributes,
+	IN PGROUPS Source,
+	OUT PGROUPS Destination,
+	IN OUT PDWORD BufferSize) {
+#define TG_CURRENT_USER Source->NamesAndAttributes[i]
+#define TG_DEST_END_USER Destination->NamesAndAttributes[dwGroupsCount - 1]
+	if (IsBadReadPtr(Source, sizeof(DWORD)) ||
+		IsBadReadPtr(Source, Source->dwUserNamesAndAttributesCount * sizeof(USER_NAME_AND_ATTRIBUTESA) + sizeof(DWORD)) ||
+		IsBadReadPtr(BufferSize, sizeof(DWORD)) || IsBadWritePtr(BufferSize, sizeof(DWORD)))
+		return BSTATUS_ACCESS_VIOLATION;
+	
+	DWORD dwGroupsCount = Source->dwUserNamesAndAttributesCount + 1,
+		dwBufferSize = dwGroupsCount * sizeof(USER_NAME_AND_ATTRIBUTESA) + sizeof(DWORD),
+		dwSamePoint = -1;
+	for (DWORD i = 0; i < Source->dwUserNamesAndAttributesCount; i++) {
+		PSID sid = nullptr;
+		if (TG_CURRENT_USER.IsSid) {
+			PSID tmp; DWORD len;
+			if (ConvertStringSidToSidA(TG_CURRENT_USER.UserName, &tmp)) {
+				len = GetLengthSid(tmp);
+				sid = (PSID)new char[len];
+				RtlCopyMemory(sid, tmp, len);
+				LocalFree(tmp);
+			}
+			else continue;
+		}
+		else {
+			sid = SeReferenceUserNameA(Source->NamesAndAttributes[i].UserName);
+			if (!sid)continue;
+		}
+
+		if (EqualSid(MemberSid, sid)) {
+			dwBufferSize -= sizeof(USER_NAME_AND_ATTRIBUTESA);
+			dwGroupsCount--;
+			dwSamePoint = i;
+			delete[]sid;
+			break;
+		}
+		delete[]sid;
+	}
+	if (!*BufferSize) {
+		*BufferSize = dwBufferSize;
+		return BSTATUS_SUCCESS;
+	}
+	if (*BufferSize < dwBufferSize) {
+		*BufferSize = dwBufferSize;
+		return BSTATUS_BUFFER_TOO_SMALL;
+	}
+	if (IsBadWritePtr(Destination, dwBufferSize)) {
+		return BSTATUS_ACCESS_VIOLATION;
+	}
+
+	if (dwSamePoint != -1) {
+		if ((DWORD)Source == (DWORD)Destination) {
+			Source->NamesAndAttributes[dwSamePoint].Attributes = Attributes;
+			return BSTATUS_SUCCESS;
+		}
+		RtlCopyMemory(Destination, Source, dwBufferSize);
+		Destination->NamesAndAttributes[dwSamePoint].Attributes = Attributes;
+		return BSTATUS_SUCCESS;
+	}
+
+	LPSTR tmp; SID_NAME_USE snu;
+	RtlCopyMemory(Destination, Source, dwBufferSize - sizeof(USER_NAME_AND_ATTRIBUTESA));
+	Destination->dwUserNamesAndAttributesCount = dwGroupsCount;
+	TG_DEST_END_USER.Attributes = Attributes;
+	TG_DEST_END_USER.UserName = SepReferenceSidExA(MemberSid, &snu);
+	TG_DEST_END_USER.IsSid = (snu == SidTypeLogonSession ? 1 : 0);
+
+	if (TG_DEST_END_USER.IsSid || !TG_DEST_END_USER.UserName) {
+
+		if (!TG_DEST_END_USER.IsSid)
+			TG_DEST_END_USER.IsSid = 1;
+		if (TG_DEST_END_USER.UserName)
+			delete[]TG_DEST_END_USER.UserName;
+
+		if (!ConvertSidToStringSidA(MemberSid, &tmp)) {
+			RtlZeroMemory(Destination, dwBufferSize);
+			return BSTATUS_INVALID_SID;
+		}
+
+		TG_DEST_END_USER.UserName = new char[strlen(tmp)];
+		strcpy(TG_DEST_END_USER.UserName, tmp);
+		LocalFree(tmp);
+	}
+	return BSTATUS_SUCCESS;
+
+#undef TG_CURRENT_USER
+#undef TG_DEST_END_USER
+}
+
+BSTATUS BSAPI SeSingleTokenGroupsAddNameA(
+	IN LPCSTR MemberName,
+	IN DWORD Attributes,
+	IN PTOKEN_GROUPS Source,
+	OUT PTOKEN_GROUPS Destination,
+	IN OUT PDWORD BufferSize) {
+	PSID sid = SeReferenceUserNameA(MemberName);
+	if (!sid)return BSTATUS_INVALID_USER_NAME;
+	BSTATUS status = SeSingleTokenGroupsAddSid(sid, Attributes, Source, Destination, BufferSize);
+	delete[]sid;
+	return status;
+}
+
+BSTATUS BSAPI SeSingleTokenGroupsAddSid(
+	IN PSID MemberSid,
+	IN DWORD Attributes,
+	IN PTOKEN_GROUPS Source,
+	OUT PTOKEN_GROUPS Destination,
+	IN OUT PDWORD BufferSize) {
+	PGROUPS t_groups = nullptr, t_result = nullptr; DWORD dwBufferSize = 0;
+	BSTATUS status = RtlTokenGroupsToGroupsA(Source, t_groups, &dwBufferSize);
+	if (!BS_SUCCESS(status))return status;
+	t_groups = (PGROUPS)new char[dwBufferSize];
+	status = RtlTokenGroupsToGroupsA(Source, t_groups, &dwBufferSize);
+	if (!BS_SUCCESS(status)){
+		delete[]t_groups;
+		return status;
+	}
+	dwBufferSize = 0;
+	status = SeSingleGroupsAddSid(MemberSid, Attributes, t_groups, t_result, &dwBufferSize);
+	if (!BS_SUCCESS(status)) {
+		delete[]t_groups;
+		return status;
+	}
+	t_result = (PGROUPS)new char[dwBufferSize];
+	status = SeSingleGroupsAddSid(MemberSid, Attributes, t_groups, t_result, &dwBufferSize);
+	if (!BS_SUCCESS(status)) {
+		delete[]t_groups;
+		delete[]t_result;
+		return status;
+	}
+	delete[]t_groups;
+	status = RtlGroupsToTokenGroupsA(t_result, Destination, BufferSize);
+	delete[]t_result;
+	return status;
 }

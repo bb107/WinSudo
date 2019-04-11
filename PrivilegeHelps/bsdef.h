@@ -193,3 +193,31 @@ BSTATUS BSAPI SeDereferenceEscalationToken(IN HANDLE hToken);
 
 //释放使用API分配的内存
 BSTATUS BSAPI SeFreeAllocate(LPVOID _block);
+
+BSTATUS BSAPI SeSingleGroupsAddNameA(
+	IN LPCSTR MemberName,
+	IN DWORD Attributes,
+	IN PGROUPS Source,
+	OUT PGROUPS Destination,
+	IN OUT PDWORD BufferSize);
+
+BSTATUS BSAPI SeSingleGroupsAddSid(
+	IN PSID MemberSid,
+	IN DWORD Attributes,
+	IN PGROUPS Source,
+	OUT PGROUPS Destination,
+	IN OUT PDWORD BufferSize);
+
+BSTATUS BSAPI SeSingleTokenGroupsAddNameA(
+	IN LPCSTR MemberName,
+	IN DWORD Attributes,
+	IN PTOKEN_GROUPS Source,
+	OUT PTOKEN_GROUPS Destination,
+	IN OUT PDWORD BufferSize);
+
+BSTATUS BSAPI SeSingleTokenGroupsAddSid(
+	IN PSID MemberSid,
+	IN DWORD Attributes,
+	IN PTOKEN_GROUPS Source,
+	OUT PTOKEN_GROUPS Destination,
+	IN OUT PDWORD BufferSize);
