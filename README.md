@@ -16,11 +16,10 @@ sudo.exe 程序名 参数...
 ## defects  (缺陷)
 * **Cannot inherit the current console window under Windows7**
 * **Windows7 下无法继承当前控制台窗口**
-
-## Project Features (项目特点)
 * **process need to be elevated**
 * **进程需要提升**
 
+## Project Features (项目特点)
 * All enabled privileges are enabled by default
 * 默认开启所有能启用的特权
 
@@ -43,9 +42,39 @@ Create a process with local system permissions using the PrivilegeHelps library.
 * cmder</br>
 The process created by the `CreateProcessWithTokenW` function assigns a new console by default, and the cmder will reattach the original console to achieve in-place promotion.</br>
 `CreateProcessWithTokenW`函数创建的进程默认分配新控制台,cmder将重新附加原来的控制台,以实现原地提升.</br></br>
-
 However, the standard output handle cannot be copied under Windows 7, and the additional source console cannot be implemented.</br>
 但是,在Windows7下无法复制标准输出句柄,不能实现附加源控制台.
+
+## Important function description (重要函数说明)
+```
+SeCreateUserTokenExA
+Create a user access token based on user-defined information.
+创建一个用户访问令牌,根据用户自定义的信息.
+
+SeCreateUserTokenA
+A simplified version of SeCreateUserTokenExA that is called internally.
+SeCreateUserTokenExA的简化版,在内部调用了它
+
+SeEnablePrivilegesToken
+Create a new token with the specified privilege, the other information is consistent with the source token.
+创建一个指定特权的新令牌,其他信息与源令牌一致
+
+RtlTokenPrivilegesToPrivilegeValue
+Convert the TOKEN_PRIVILEGES structure to a PRIVILEGE_VALUE 64-bit value.
+将TOKEN_PRIVILEGES结构转换为PRIVILEGE_VALUE 64位值.
+
+RtlGroupsToTokenGroupsA
+Convert the GROUPS structure to the TOKEN_GROUPS structure.
+将GROUPS结构转换为TOKEN_GROUPS结构.
+
+SeReferenceEscalationToken
+You will get a copy of the elevated token, which you need to call SeDereferenceEscalationToken or NtClose or CloseHandle to close.
+将获取一个提升的令牌副本,使用完毕需要调用SeDereferenceEscalationToken或者NtClose或者CloseHandle关闭.
+
+SeDereferenceEscalationToken
+Close a handle with the Win32 CloseHandle and NT NtClose functions.
+关闭一个句柄,同Win32 CloseHandle 和 NT NtClose函数.
+```
 
 ## Screenshot of the program running (程序运行的截图)
 ![alt text](screenshots/sudo.png?raw=true "sudo")
