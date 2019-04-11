@@ -2,6 +2,9 @@
 Execute commands as local system.</br>
 以本地系统上下文执行命令.
 
+**This code is for learning communication only and may not be used to create malware.**</br>
+**此代码仅用于学习交流,不得用于制作恶意软件.**
+
 [![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/996icu/996.ICU/blob/master/LICENSE)
 
 **Warning: Please use this program with caution, especially calling the PrivilegeHelps library.**</br>
@@ -16,7 +19,7 @@ sudo.exe 程序名 参数...
 ## defects  (缺陷)
 * **Cannot inherit the current console window under Windows7**
 * **Windows7 下无法继承当前控制台窗口**
-* **process need to be elevated**
+* **Process need to be elevated**
 * **进程需要提升**
 
 ## Project Features (项目特点)
