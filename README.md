@@ -17,8 +17,8 @@ sudo.exe 程序名 参数...
 ```
 
 ## defects  (缺陷)
-~~* **Cannot inherit the current console window under Windows7 (issue #1)**~~
-~~* **Windows7 下无法继承当前控制台窗口 (issue #1)**~~
+* ~~**Cannot inherit the current console window under Windows7 (issue #1)**~~
+* ~~**Windows7 下无法继承当前控制台窗口 (issue #1)**~~
 * **Process need to be elevated**
 * **进程需要提升**
 
