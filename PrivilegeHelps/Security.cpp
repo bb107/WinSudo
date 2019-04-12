@@ -1,7 +1,6 @@
 #include "Security.h"
 #include "Native.h"
 #include "Process.h"
-
 #pragma warning(disable:4838)
 #pragma warning(disable:4996)
 
@@ -46,6 +45,19 @@ LPCSTR PrivilegeNames[] = {
 	"SeDelegateSessionUserImpersonatePrivilege"
 };
 
+BSTATUS BSAPI SepElevateCurrentThread() {
+	if (!hElvToken)return BSTATUS_NOT_INITED;
+	if (!reference_count && !ImpersonateLoggedOnUser(hElvToken)) return BSTATUS_UNSUCCESSFUL;
+	reference_count++;
+	return BSTATUS_SUCCESS;
+}
+
+BSTATUS BSAPI SepRevertToSelf() {
+	if (!reference_count || !hElvToken)return BSTATUS_UNSUCCESSFUL;
+	if (!--reference_count)RevertToSelf();
+	return BSTATUS_SUCCESS;
+}
+
 BSTATUS BSAPI SeInitialDll() {
 	if (hElvToken)return BSTATUS_SUCCESS;
 	PSID sid1 = SeReferenceUserNameA("high mandatory level"),
@@ -60,7 +72,7 @@ BSTATUS BSAPI SeInitialDll() {
 		if (EqualSid(tg->Groups[i].Sid, sid1) || EqualSid(tg->Groups[i].Sid, sid2)) {
 			attr = tg->Groups[i].Attributes;
 			delete[]sid1; delete[]sid2; delete[]tg;
-			return (attr & SE_GROUP_USE_FOR_DENY_ONLY) ? BSTATUS_ACCESS_DENIED : SePrivilegeEscalation(&hElvToken);
+			return (attr & SE_GROUP_USE_FOR_DENY_ONLY) ? BSTATUS_ACCESS_DENIED : SepPrivilegeEscalation(&hElvToken);
 		}
 	}
 	delete[]sid1; delete[]sid2; delete[]tg;
@@ -73,7 +85,7 @@ BSTATUS BSAPI SeReleaseDll() {
 	return BSTATUS_SUCCESS;
 }
 
-BSTATUS SePrivilegeEscalation(PHANDLE _hToken) {
+BSTATUS BSAPI SepPrivilegeEscalation(PHANDLE _hToken) {
 	if (IsBadWritePtr(_hToken, sizeof(HANDLE)))return BSTATUS_ACCESS_VIOLATION;
 	DWORD dwLsaId = PsGetProcessId("lsass.exe");
 
@@ -106,18 +118,31 @@ BSTATUS SePrivilegeEscalation(PHANDLE _hToken) {
 }
 
 DWORD BSAPI SeQueryInformationToken(HANDLE hToken, TOKEN_INFORMATION_CLASS info, LPVOID mem) {
-	DWORD len = 0; LPVOID lpMemory = nullptr;
-	GetTokenInformation(hToken, info, lpMemory, len, &len); if (!len)return 0;
-	lpMemory = new char[len];
-	if (!GetTokenInformation(hToken, info, lpMemory, len, &len)) {
-		delete[]lpMemory; return 0;
+	if (IsBadWritePtr(mem, sizeof(LPVOID)))return BSTATUS_ACCESS_VIOLATION;
+	BSTATUS status = SepElevateCurrentThread();
+	DWORD len = 0; LPVOID lpMemory = nullptr; BOOL ret;
+	GetTokenInformation(hToken, info, lpMemory, len, &len);
+	if (!len) {
+		if (BS_SUCCESS(status))SepRevertToSelf();
+		return 0;
 	}
-	*(LPVOID*)mem = lpMemory; return len;
+	lpMemory = new char[len];
+	ret = GetTokenInformation(hToken, info, lpMemory, len, &len);
+	if (BS_SUCCESS(status))SepRevertToSelf();
+	if (!ret) {
+		delete[]lpMemory;
+		return 0;
+	}
+	*(LPVOID*)mem = lpMemory;
+	return len;
 }
 
 BSTATUS BSAPI SeSetInformationToken(HANDLE hToken, TOKEN_INFORMATION_CLASS info, LPVOID mem, DWORD memlen) {
 	if (IsBadReadPtr(mem, memlen))return BSTATUS_ACCESS_VIOLATION;
-	return SetTokenInformation(hToken, info, mem, memlen) ? BSTATUS_SUCCESS : BSTATUS_UNSUCCESSFUL;
+	BSTATUS status = SepElevateCurrentThread();
+	BOOL ret = SetTokenInformation(hToken, info, mem, memlen);
+	if (BS_SUCCESS(status))SepRevertToSelf();
+	return ret ? BSTATUS_SUCCESS : BSTATUS_UNSUCCESSFUL;
 }
 
 PSID BSAPI SepReferenceUserNameExA(LPCSTR user, PSID_NAME_USE snu) {
@@ -170,13 +195,12 @@ BSTATUS BSAPI SeCreateUserTokenExA(
 	LUID auth_id; LARGE_INTEGER exp = { 0xefffffff,0xffffffff }; SECURITY_DESCRIPTOR sd;
 	SECURITY_QUALITY_OF_SERVICE sqos = { 0 }; OBJECT_ATTRIBUTES obj; TOKEN_DEFAULT_DACL tdd = { 0 };
 
-	if (!hElvToken)return BSTATUS_NOT_INITED;
+	
 	if (((dwFlags&SE_CREATE_USE_GROUPS) && (dwFlags&SE_CREATE_USE_TOKEN_GROUPS)) ||
 		(!(dwFlags&SE_CREATE_USE_GROUPS) && !(dwFlags&SE_CREATE_USE_TOKEN_GROUPS)))
 		return BSTATUS_INVALID_PARAMETER;
 	if (dwFlags&SE_CREATE_DISABLE_ALL_PRIVILEGES)TokenPrivileges |= SE_DISABLE_PRIVILEGE_VALUE;
-	if (!reference_count && !ImpersonateLoggedOnUser(hElvToken)) return BSTATUS_UNSUCCESSFUL;
-	reference_count++;
+	if (!BS_SUCCESS(SepElevateCurrentThread()))return BSTATUS_NOT_INITED;
 
 	switch (AuthType) {
 	case	System:auth_id = SYSTEM_LUID; break;
@@ -184,7 +208,7 @@ BSTATUS BSAPI SeCreateUserTokenExA(
 	case	AnonymousLogon:auth_id = ANONYMOUS_LOGON_LUID; break;
 	case	Other:auth_id = AuthId; break;
 	default:
-		if (!--reference_count)RevertToSelf();
+		SepRevertToSelf();
 		return BSTATUS_INVALID_PARAMETER;
 	}
 	if (IsBadWritePtr(TokenHandle, sizeof(HANDLE)) ||
@@ -195,7 +219,7 @@ BSTATUS BSAPI SeCreateUserTokenExA(
 		IsBadReadPtr(TokenOwner, sizeof(LPCSTR)) ||
 		((dwFlags&SE_CREATE_USE_TOKEN_SOURCE) && IsBadReadPtr(TokenSource, sizeof(TOKEN_SOURCE))) ||
 		IsBadReadPtr(TokenPrimaryGroup, sizeof(LPCSTR))) {
-		if (!--reference_count)RevertToSelf();
+		SepRevertToSelf();
 		return BSTATUS_ACCESS_VIOLATION;
 	}
 
@@ -253,7 +277,7 @@ BSTATUS BSAPI SeCreateUserTokenExA(
 		if (tp)delete[]tp;
 		if (to.Owner)delete[]to.Owner;
 		if (tpg.PrimaryGroup)delete[]tpg.PrimaryGroup;
-		if (!--reference_count)RevertToSelf();
+		SepRevertToSelf();
 		return Exception;
 	}
 
@@ -280,7 +304,7 @@ BSTATUS BSAPI SeCreateUserTokenExA(
 	//	*TokenHandle = hDup;
 	//}
 
-	if (!--reference_count)RevertToSelf();
+	SepRevertToSelf();
 	if (NT_SUCCESS(status))return BSTATUS_SUCCESS;
 	SetLastError(RtlNtStatusToDosError(status));
 	return BSTATUS_UNSUCCESSFUL;
@@ -301,15 +325,13 @@ BSTATUS BSAPI SeCreateUserTokenA(
 }
 
 BSTATUS BSAPI SeEnablePrivilegesToken(IN OUT PHANDLE hToken, IN PRIVILEGE_VALUE EnablePrivileges) {
-	if (!hElvToken)return BSTATUS_NOT_INITED;
-	if (!reference_count && !ImpersonateLoggedOnUser(hElvToken)) return BSTATUS_UNSUCCESSFUL;
-	reference_count++;
+	if (!BS_SUCCESS(SepElevateCurrentThread()))return BSTATUS_NOT_INITED;
 	if (EnablePrivileges&SE_DISABLE_PRIVILEGE_VALUE || !EnablePrivileges) {
-		if (!--reference_count)RevertToSelf();
+		SepRevertToSelf();
 		return BSTATUS_INVALID_PARAMETER;
 	}
 	if (IsBadReadPtr(hToken, sizeof(PHANDLE)) || IsBadWritePtr(hToken, sizeof(PHANDLE))) {
-		if (!--reference_count)RevertToSelf();
+		SepRevertToSelf();
 		return BSTATUS_ACCESS_VIOLATION;
 	}
 
@@ -350,35 +372,31 @@ BSTATUS BSAPI SeEnablePrivilegesToken(IN OUT PHANDLE hToken, IN PRIVILEGE_VALUE 
 	NTSTATUS status = NtCreateToken(hToken, TOKEN_ALL_ACCESS, &obj, tss->TokenType,
 		&tss->AuthenticationId, &tss->ExpirationTime, tu, tg, tp, to, tpg, nullptr, ts);
 	delete[]tu; delete[]tp; delete[]tg; delete[]tpg; delete[]ts; delete[]tss; delete[]to;
-	TOKEN_ELEVATION_TYPE e = TokenElevationTypeFull;
-	SetTokenInformation(*hToken, TokenElevationType, &e, sizeof(TOKEN_ELEVATION_TYPE));
-	if (!--reference_count)RevertToSelf();
+	SepRevertToSelf();
 	if (NT_SUCCESS(status))return BSTATUS_SUCCESS;
 	SetLastError(RtlNtStatusToDosError(status));
 	return BSTATUS_UNSUCCESSFUL;
 }
 
 BSTATUS BSAPI SePrivilegeEscalationThread(DWORD dwThreadId, HANDLE hToken) {
-	if (!hElvToken)return BSTATUS_NOT_INITED;
-	if (!reference_count && !ImpersonateLoggedOnUser(hElvToken)) return BSTATUS_UNSUCCESSFUL;
-	reference_count++;
+	if (!BS_SUCCESS(SepElevateCurrentThread()))return BSTATUS_NOT_INITED;
 	HANDLE hThread = OpenProcess(PROCESS_ALL_ACCESS, FALSE, dwThreadId);
 	if (hThread <= 0) {
-		if (!--reference_count)RevertToSelf();
+		SepRevertToSelf();
 		return BSTATUS_UNSUCCESSFUL;
 	}
 	if (!DuplicateTokenEx(hToken, MAXIMUM_ALLOWED, nullptr, SecurityDelegation, TokenPrimary, &hToken)) {
 		CloseHandle(hThread);
-		if (!--reference_count)RevertToSelf();
+		SepRevertToSelf();
 		return BSTATUS_ACCESS_DENIED;
 	}
 	if (!DuplicateHandle(GetCurrentProcess(), hToken, hThread, nullptr, 0, 0, DUPLICATE_SAME_ACCESS | DUPLICATE_SAME_ATTRIBUTES)) {
 		CloseHandle(hToken); CloseHandle(hThread);
-		if (!--reference_count)RevertToSelf();
+		SepRevertToSelf();
 		return BSTATUS_ACCESS_DENIED;
 	}
 	CloseHandle(hToken); CloseHandle(hThread);
-	if (!--reference_count)RevertToSelf();
+	SepRevertToSelf();
 	return BSTATUS_SUCCESS;
 }
 
@@ -425,64 +443,56 @@ BSTATUS BSAPI SeFreeLogonSessionData(PLOGON_SESSION_DATA block) {
 
 
 BSTATUS BSAPI SeReferenceProcessPrimaryToken(IN DWORD dwProcessId, OUT PHANDLE hToken) {
-	if (!hElvToken)return BSTATUS_NOT_INITED;
-	if (!reference_count && !ImpersonateLoggedOnUser(hElvToken)) return BSTATUS_UNSUCCESSFUL;
-	reference_count++;
+	if (!BS_SUCCESS(SepElevateCurrentThread()))return BSTATUS_NOT_INITED;
 	if (IsBadWritePtr(hToken, sizeof(HANDLE))) {
-		if (!--reference_count)RevertToSelf();
+		SepRevertToSelf();
 		return BSTATUS_ACCESS_VIOLATION;
 	}
 	HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, dwProcessId);
 	if (!hProcess) {
-		if (!--reference_count)RevertToSelf();
+		SepRevertToSelf();
 		return BSTATUS_UNSUCCESSFUL;
 	}
 	BOOL status = OpenProcessToken(hProcess, TOKEN_ALL_ACCESS, hToken);
-	CloseHandle(hProcess); if (!--reference_count)RevertToSelf();
+	CloseHandle(hProcess); SepRevertToSelf();
 	return status ? BSTATUS_SUCCESS : BSTATUS_UNSUCCESSFUL;
 }
 
 BSTATUS BSAPI SeReferenceThreadToken(IN DWORD dwThreadId, OUT PHANDLE hToken) {
-	if (!hElvToken)return BSTATUS_NOT_INITED;
-	if (!reference_count && !ImpersonateLoggedOnUser(hElvToken)) return BSTATUS_UNSUCCESSFUL;
-	reference_count++;
+	if (!BS_SUCCESS(SepElevateCurrentThread()))return BSTATUS_NOT_INITED;
 	if (IsBadWritePtr(hToken, sizeof(HANDLE))) {
-		if (!--reference_count)RevertToSelf();
+		SepRevertToSelf();
 		return BSTATUS_ACCESS_VIOLATION;
 	}
 	HANDLE hThread = OpenThread(THREAD_ALL_ACCESS, FALSE, dwThreadId);
 	if (!hThread) {
-		if (!--reference_count)RevertToSelf();
+		SepRevertToSelf();
 		return BSTATUS_UNSUCCESSFUL;
 	}
 	BOOL status = OpenThreadToken(hThread, TOKEN_ALL_ACCESS, FALSE, hToken);
-	CloseHandle(hThread); if (!--reference_count)RevertToSelf();
+	CloseHandle(hThread); SepRevertToSelf();
 	return status ? BSTATUS_SUCCESS : BSTATUS_UNSUCCESSFUL;
 }
 
 BSTATUS BSAPI SeReferenceProcess(IN DWORD dwProcessId, OUT PHANDLE hProcess) {
-	if (!hElvToken)return BSTATUS_NOT_INITED;
-	if (!reference_count && !ImpersonateLoggedOnUser(hElvToken)) return BSTATUS_UNSUCCESSFUL;
-	reference_count++;
+	if (!BS_SUCCESS(SepElevateCurrentThread()))return BSTATUS_NOT_INITED;
 	if (IsBadWritePtr(hProcess, sizeof(HANDLE))) {
-		if (!--reference_count)RevertToSelf();
+		SepRevertToSelf();
 		return BSTATUS_ACCESS_VIOLATION;
 	}
 	*hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, dwProcessId);
-	if (!--reference_count)RevertToSelf();
+	SepRevertToSelf();
 	return *hProcess ? BSTATUS_SUCCESS : BSTATUS_UNSUCCESSFUL;
 }
 
 BSTATUS BSAPI SeReferenceThread(IN DWORD dwThreadId, OUT PHANDLE hThread) {
-	if (!hElvToken)return BSTATUS_NOT_INITED;
-	if (!reference_count && !ImpersonateLoggedOnUser(hElvToken)) return BSTATUS_UNSUCCESSFUL;
-	reference_count++;
+	if (!BS_SUCCESS(SepElevateCurrentThread()))return BSTATUS_NOT_INITED;
 	if (IsBadWritePtr(hThread, sizeof(HANDLE))) {
-		if (!--reference_count)RevertToSelf();
+		SepRevertToSelf();
 		return BSTATUS_ACCESS_VIOLATION;
 	}
 	*hThread = OpenThread(THREAD_ALL_ACCESS, FALSE, dwThreadId);
-	if (!--reference_count)RevertToSelf();
+	SepRevertToSelf();
 	return *hThread ? BSTATUS_SUCCESS : BSTATUS_UNSUCCESSFUL;
 }
 

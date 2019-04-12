@@ -36,7 +36,7 @@ int wmain(int argc, wchar_t *argv[]) {
 	tg2 = (PTOKEN_GROUPS)new char[dwsize];
 	status = SeSingleTokenGroupsAddNameA(
 		"nt service\\trustedinstaller",
-		SE_GROUP_LOGON_ID | SE_GROUP_ENABLED | SE_GROUP_ENABLED_BY_DEFAULT | SE_GROUP_MANDATORY | SE_GROUP_OWNER,
+		SE_GROUP_ENABLED | SE_GROUP_ENABLED_BY_DEFAULT | SE_GROUP_MANDATORY | SE_GROUP_OWNER,
 		tg, tg2, &dwsize);
 	SeFreeAllocate(tg); tg = tg2;
 	if (!BS_SUCCESS(status)) {
@@ -54,8 +54,8 @@ int wmain(int argc, wchar_t *argv[]) {
 		tg,
 		priv,
 		//argv[1],
-		"administrators",
 		"system",
+		"administrators",
 		nullptr, nullptr,
 		SECURITY_MAX_IMPERSONATION_LEVEL);
 	delete[]tg;
@@ -72,21 +72,19 @@ int wmain(int argc, wchar_t *argv[]) {
 	}
 
 	STARTUPINFOW si = { 0 }; PROCESS_INFORMATION pi; DWORD e = 0;
-	HANDLE hToken2;
 	wchar_t *cmd, dir[1000]; int len = 0;
 	GetCurrentDirectoryW(1000, dir);
 	for (int i = 1; i < argc; i++) len += wcslen(argv[i]);
 	len += 1000 + argc;
 	cmd = new wchar_t[len];
 	RtlZeroMemory(cmd, sizeof(wchar_t)*len);
+
 	ProcessIdToSessionId(GetCurrentProcessId(), &e);
-	ImpersonateLoggedOnUser(hToken);
 	status = SeSetInformationToken(hToken, TokenSessionId, &e, sizeof(DWORD));
 	if (!BS_SUCCESS(status)) {
 		CloseHandle(hToken);
 		return 0;
 	}
-	RevertToSelf();
 	ImpersonateLoggedOnUser(hToken);
 
 	for (int i = 1; i < argc; i++) {
@@ -101,7 +99,7 @@ int wmain(int argc, wchar_t *argv[]) {
 		wsprintfW(cmd, add ? L"%s\"%s\" " : L"%s%s ", cmd, argv[i]);
 	}
 
-	if (CreateProcessInternalW(hToken, nullptr, cmd, nullptr, nullptr, TRUE, CREATE_UNICODE_ENVIRONMENT, GetEnvironmentStringsW(), dir, &si, &pi, &hToken2)) {
+	if (CreateProcessInternalW(hToken, nullptr, cmd, nullptr, nullptr, TRUE, CREATE_UNICODE_ENVIRONMENT, GetEnvironmentStringsW(), dir, &si, &pi, (PHANDLE)&e)) {
 		do {
 			WaitForSingleObject(pi.hProcess, 0xffff);
 			GetExitCodeProcess(pi.hProcess, &e);
