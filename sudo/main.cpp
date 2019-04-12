@@ -25,7 +25,7 @@ int wmain(int argc, wchar_t *argv[]) {
 		return 0;
 	}
 
-	//以lsass.exe的组信息为基础,添加 TrustedInstall 用户组
+	//以lsass.exe的组信息为基础,添加 TrustedInstaller 用户组
 	if (!SeQueryInformationToken(hToken, TokenGroups, &tg)) {
 		printf("0x%08X|sudo: failed.\n", GetLastError());
 		CloseHandle(hToken);
@@ -72,56 +72,46 @@ int wmain(int argc, wchar_t *argv[]) {
 	}
 
 	STARTUPINFOW si = { 0 }; PROCESS_INFORMATION pi; DWORD e = 0;
+	HANDLE hToken2;
 	wchar_t *cmd, dir[1000]; int len = 0;
 	GetCurrentDirectoryW(1000, dir);
 	for (int i = 1; i < argc; i++) len += wcslen(argv[i]);
 	len += 1000 + argc;
 	cmd = new wchar_t[len];
 	RtlZeroMemory(cmd, sizeof(wchar_t)*len);
+	ProcessIdToSessionId(GetCurrentProcessId(), &e);
+	ImpersonateLoggedOnUser(hToken);
+	status = SeSetInformationToken(hToken, TokenSessionId, &e, sizeof(DWORD));
+	if (!BS_SUCCESS(status)) {
+		CloseHandle(hToken);
+		return 0;
+	}
+	RevertToSelf();
+	ImpersonateLoggedOnUser(hToken);
 
-	if (!NT_SUCCESS(NtDuplicateObject(GetCurrentProcess(), GetStdHandle(STD_OUTPUT_HANDLE),
-		GetCurrentProcess(), &si.hStdError, 0, TRUE, DUPLICATE_SAME_ACCESS | DUPLICATE_SAME_ATTRIBUTES)) ||
-		!NT_SUCCESS(NtDuplicateObject(GetCurrentProcess(), GetStdHandle(STD_INPUT_HANDLE),
-			GetCurrentProcess(), &si.hStdInput, 0, TRUE, DUPLICATE_SAME_ACCESS | DUPLICATE_SAME_ATTRIBUTES))) {
-		for (int i = 1; i < argc; i++) {
-			bool add = false; int j = 0; wchar_t current;
-			while (true) {
-				current = *(argv[i] + j++);
-				if (!current)break;
-				if (current == L' ') {
-					add = true; break;
-				}
+	for (int i = 1; i < argc; i++) {
+		bool add = false; int j = 0; wchar_t current;
+		while (true) {
+			current = *(argv[i] + j++);
+			if (!current)break;
+			if (current == L' ') {
+				add = true; break;
 			}
-			wsprintfW(cmd, add ? L"%s\"%s\" " : L"%s%s ", cmd, argv[i]);
 		}
+		wsprintfW(cmd, add ? L"%s\"%s\" " : L"%s%s ", cmd, argv[i]);
 	}
-	else {
-		si.hStdOutput = si.hStdError; si.wShowWindow = 0; si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
-		wsprintfW(cmd, L"%s\\cmder.exe %d ", dir, GetCurrentProcessId());
-		for (int i = 1; i < argc; i++) {
-			bool add = false; int j = 0; wchar_t current;
-			while (true) {
-				current = *(argv[i] + j++);
-				if (!current)break;
-				if (current == L' ') {
-					add = true; break;
-				}
-			}
-			wsprintfW(cmd, add ? L"%s\"%s\" " : L"%s%s ", cmd, argv[i]);
-		}
-	}
-	if (CreateProcessWithTokenW(hToken, LOGON_WITH_PROFILE, nullptr, cmd, CREATE_UNICODE_ENVIRONMENT, GetEnvironmentStringsW(), dir, &si, &pi)) {
-		if (si.dwFlags&STARTF_USESTDHANDLES) {
-			do {
-				WaitForSingleObject(pi.hProcess, 0xffff);
-				GetExitCodeProcess(pi.hProcess, &e);
-			} while (e == STILL_ACTIVE);
-		}
+
+	if (CreateProcessInternalW(hToken, nullptr, cmd, nullptr, nullptr, TRUE, CREATE_UNICODE_ENVIRONMENT, GetEnvironmentStringsW(), dir, &si, &pi, &hToken2)) {
+		do {
+			WaitForSingleObject(pi.hProcess, 0xffff);
+			GetExitCodeProcess(pi.hProcess, &e);
+		} while (e == STILL_ACTIVE);
 	}
 	else {
 		printf("0x%08X|sudo: create process failed.\n", GetLastError());
 	}
 	delete[]cmd;
 	CloseHandle(hToken);
+	RevertToSelf();
 	return 0;
 }
