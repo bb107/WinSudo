@@ -1,5 +1,7 @@
 #include <Windows.h>
 #include "Process.h"
+#include "Native.h"
+#include "Security.h"
 
 const std::string Strupr(IN const char* buf) {
 	int len = strlen(buf) + 1;
@@ -10,7 +12,7 @@ const std::string Strupr(IN const char* buf) {
 }
 #define strupr Strupr
 
-DWORD PsGetProcessId(const char* szProcessName) {
+DWORD BSAPI PsGetProcessId(const char* szProcessName) {
 	HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 	std::string pn = strupr((char*)szProcessName);
 	if (hSnapshot == INVALID_HANDLE_VALUE)	return 0;
@@ -23,4 +25,117 @@ DWORD PsGetProcessId(const char* szProcessName) {
 	} while (Process32Next(hSnapshot, &ps));
 	CloseHandle(hSnapshot);
 	return 0;
+}
+
+DWORD BSAPI PsCurrentProcessId() {
+	return GetCurrentProcessId();
+}
+
+DWORD BSAPI PsCurrentThreadId() {
+	return GetCurrentThreadId();
+}
+
+BSTATUS BSAPI PsCreateUserProcessA(
+	HANDLE hUserToken,
+	LPCSTR lpApplicationName,
+	LPSTR lpCommandLine,
+	BOOL bInheritHandles,
+	DWORD dwCreationFlags,
+	LPVOID lpEnvironment,
+	LPCSTR lpCurrentDirectory,
+	LPSTARTUPINFOA lpStartupInfo,
+	LPPROCESS_INFORMATION lpProcessInformation) {
+	if (IsBadWritePtr(lpProcessInformation, sizeof(PROCESS_INFORMATION)) ||
+		IsBadWritePtr(lpStartupInfo, sizeof(STARTUPINFOA)) ||
+		IsBadReadPtr(lpStartupInfo, sizeof(STARTUPINFOA)))
+		return BSTATUS_ACCESS_VIOLATION;
+
+	HANDLE tmp = hElvToken; DWORD *dwSessionId;
+	PRIVILEGE_VALUE privs =	SE_ASSIGNPRIMARYTOKEN_VALUE | SE_IMPERSONATE_VALUE | SE_TCB_VALUE | SE_DEBUG_VALUE;
+	BSTATUS status = SeEnablePrivilegesToken(&tmp, privs);
+	if (!BS_SUCCESS(status))return status;
+
+	if (sizeof(DWORD) != SeQueryInformationToken(hUserToken, TokenSessionId, &dwSessionId)) {
+		SeDereferenceEscalationToken(tmp);
+		return BSTATUS_UNSUCCESSFUL;
+	}
+	status = SeSetInformationToken(hUserToken, TokenSessionId, dwSessionId, sizeof(DWORD));
+	SeFreeAllocate(dwSessionId);
+	if (!BS_SUCCESS(status)) {
+		SeDereferenceEscalationToken(tmp);
+		return BSTATUS_UNSUCCESSFUL;
+	}
+	RevertToSelf();
+	ImpersonateLoggedOnUser(tmp);
+	SeDereferenceEscalationToken(tmp);
+
+	BOOL ret = CreateProcessInternalA(
+		hUserToken,
+		lpApplicationName, lpCommandLine,
+		nullptr, nullptr,
+		bInheritHandles,
+		dwCreationFlags,
+		lpEnvironment,
+		lpCurrentDirectory,
+		lpStartupInfo,
+		lpProcessInformation,
+		&tmp);
+	dwSessionId = (PDWORD)GetLastError();
+
+	RevertToSelf();
+	if (reference_count)ImpersonateLoggedOnUser(hElvToken);
+	SetLastError((DWORD)dwSessionId);
+	return ret ? BSTATUS_SUCCESS : BSTATUS_UNSUCCESSFUL;
+}
+
+BSTATUS BSAPI PsCreateUserProcessW(
+	HANDLE hUserToken,
+	LPCWSTR lpApplicationName,
+	LPWSTR lpCommandLine,
+	BOOL bInheritHandles,
+	DWORD dwCreationFlags,
+	LPVOID lpEnvironment,
+	LPCWSTR lpCurrentDirectory,
+	LPSTARTUPINFOW lpStartupInfo,
+	LPPROCESS_INFORMATION lpProcessInformation) {
+	if (IsBadWritePtr(lpProcessInformation, sizeof(PROCESS_INFORMATION)) ||
+		IsBadWritePtr(lpStartupInfo, sizeof(STARTUPINFOW)) ||
+		IsBadReadPtr(lpStartupInfo, sizeof(STARTUPINFOW)))
+		return BSTATUS_ACCESS_VIOLATION;
+
+	HANDLE tmp = hElvToken; DWORD *dwSessionId;
+	PRIVILEGE_VALUE privs = SE_ASSIGNPRIMARYTOKEN_VALUE | SE_IMPERSONATE_VALUE | SE_TCB_VALUE | SE_DEBUG_VALUE;
+	BSTATUS status = SeEnablePrivilegesToken(&tmp, privs);
+	if (!BS_SUCCESS(status))return status;
+	if (sizeof(DWORD) != SeQueryInformationToken(hUserToken, TokenSessionId, &dwSessionId)) {
+		SeDereferenceEscalationToken(tmp);
+		return BSTATUS_UNSUCCESSFUL;
+	}
+	status = SeSetInformationToken(hUserToken, TokenSessionId, dwSessionId, sizeof(DWORD));
+	SeFreeAllocate(dwSessionId);
+	if (!BS_SUCCESS(status)) {
+		CloseHandle(tmp);
+		return BSTATUS_UNSUCCESSFUL;
+	}
+	RevertToSelf();
+	ImpersonateLoggedOnUser(tmp);
+	SeDereferenceEscalationToken(tmp);
+
+	BOOL ret = CreateProcessInternalW(
+		hUserToken,
+		lpApplicationName, lpCommandLine,
+		nullptr, nullptr,
+		bInheritHandles,
+		dwCreationFlags,
+		lpEnvironment,
+		lpCurrentDirectory,
+		lpStartupInfo,
+		lpProcessInformation,
+		&tmp);
+	dwSessionId = (PDWORD)GetLastError();
+
+	RevertToSelf();
+	if (reference_count)ImpersonateLoggedOnUser(hElvToken);
+	SetLastError((DWORD)dwSessionId);
+	return ret ? BSTATUS_SUCCESS : BSTATUS_UNSUCCESSFUL;
 }

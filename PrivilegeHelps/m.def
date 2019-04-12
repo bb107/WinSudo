@@ -39,3 +39,7 @@ SeSingleGroupsAddNameA	@25
 SeSingleGroupsAddSid	@26
 SeSingleTokenGroupsAddNameA	@27
 SeSingleTokenGroupsAddSid	@28
+
+PsCreateUserProcessA	@29
+PsCreateUserProcessW	@30
+

@@ -3,5 +3,7 @@
 #include <Windows.h>
 #include <TlHelp32.h>
 #include <string>
+#include "bsdef.h"
 
-DWORD PsGetProcessId(const char* szProcessName);
+DWORD BSAPI PsGetProcessId(const char* szProcessName);
+

@@ -66,16 +66,21 @@ BSTATUS BSAPI SeInitialDll() {
 	if (!OpenProcessToken(GetCurrentProcess(), MAXIMUM_ALLOWED, &hProcess)) {
 		delete[]sid1; delete[]sid2; return BSTATUS_UNSUCCESSFUL;
 	}
-	TOKEN_GROUPS *tg; SeQueryInformationToken(hProcess, TokenGroups, &tg); DWORD attr;
+	TOKEN_GROUPS *tg = nullptr; SeQueryInformationToken(hProcess, TokenGroups, &tg); DWORD attr;
 	CloseHandle(hProcess);
-	for (DWORD i = 0; i < tg->GroupCount; i++) {
-		if (EqualSid(tg->Groups[i].Sid, sid1) || EqualSid(tg->Groups[i].Sid, sid2)) {
-			attr = tg->Groups[i].Attributes;
-			delete[]sid1; delete[]sid2; delete[]tg;
-			return (attr & SE_GROUP_USE_FOR_DENY_ONLY) ? BSTATUS_ACCESS_DENIED : SepPrivilegeEscalation(&hElvToken);
+	if (tg) {
+		for (DWORD i = 0; i < tg->GroupCount; i++) {
+			if (EqualSid(tg->Groups[i].Sid, sid1) || EqualSid(tg->Groups[i].Sid, sid2)) {
+				attr = tg->Groups[i].Attributes;
+				delete[]sid1; delete[]sid2; delete[]tg;
+				return (attr & SE_GROUP_USE_FOR_DENY_ONLY) ? BSTATUS_ACCESS_DENIED : SepPrivilegeEscalation(&hElvToken);
+			}
 		}
+		delete[]sid1; delete[]sid2; delete[]tg;
 	}
-	delete[]sid1; delete[]sid2; delete[]tg;
+	else {
+		delete[]sid1; delete[]sid2;
+	}
 	return BSTATUS_UNSUCCESSFUL;
 }
 
@@ -335,9 +340,9 @@ BSTATUS BSAPI SeEnablePrivilegesToken(IN OUT PHANDLE hToken, IN PRIVILEGE_VALUE 
 		return BSTATUS_ACCESS_VIOLATION;
 	}
 
-	TOKEN_USER *tu; TOKEN_GROUPS* tg; TOKEN_PRIVILEGES* tp;
-	TOKEN_OWNER *to; TOKEN_PRIMARY_GROUP* tpg; TOKEN_SOURCE *ts;
-	TOKEN_STATISTICS *tss; OBJECT_ATTRIBUTES obj; SECURITY_DESCRIPTOR sd;
+	TOKEN_USER *tu = nullptr; TOKEN_GROUPS* tg = nullptr; TOKEN_PRIVILEGES* tp;
+	TOKEN_OWNER *to = nullptr; TOKEN_PRIMARY_GROUP* tpg = nullptr; TOKEN_SOURCE *ts = nullptr;
+	TOKEN_STATISTICS *tss = nullptr; OBJECT_ATTRIBUTES obj; SECURITY_DESCRIPTOR sd;
 	InitializeSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION);
 
 	SECURITY_QUALITY_OF_SERVICE sqos = { 0 };
@@ -347,12 +352,23 @@ BSTATUS BSAPI SeEnablePrivilegesToken(IN OUT PHANDLE hToken, IN PRIVILEGE_VALUE 
 	InitializeObjectAttributes(&obj, nullptr, OBJ_INHERIT, nullptr, nullptr);
 	obj.SecurityQualityOfService = &sqos;
 	obj.SecurityDescriptor = &sd;
-	SeQueryInformationToken(*hToken, TokenUser, &tu);
-	SeQueryInformationToken(*hToken, TokenGroups, &tg);
-	SeQueryInformationToken(*hToken, TokenOwner, &to);
-	SeQueryInformationToken(*hToken, TokenSource, &ts);
-	SeQueryInformationToken(*hToken, TokenStatistics, &tss);
-	SeQueryInformationToken(*hToken, TokenPrimaryGroup, &tpg);
+
+	if (
+		!SeQueryInformationToken(*hToken, TokenUser, &tu) ||
+		!SeQueryInformationToken(*hToken, TokenGroups, &tg) ||
+		!SeQueryInformationToken(*hToken, TokenOwner, &to) ||
+		!SeQueryInformationToken(*hToken, TokenSource, &ts) ||
+		!SeQueryInformationToken(*hToken, TokenStatistics, &tss) ||
+		!SeQueryInformationToken(*hToken, TokenPrimaryGroup, &tpg)) {
+		if (tu)delete[]tu;
+		if (tg)delete[]tg;
+		if (to)delete[]to;
+		if (ts)delete[]ts;
+		if (tss)delete[]tss;
+		if (tpg)delete[]tpg;
+		return BSTATUS_UNSUCCESSFUL;
+	}
+
 	SetSecurityDescriptorGroup(&sd, tu->User.Sid, TRUE);
 	SetSecurityDescriptorOwner(&sd, tu->User.Sid, TRUE);
 

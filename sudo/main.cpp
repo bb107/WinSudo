@@ -85,7 +85,6 @@ int wmain(int argc, wchar_t *argv[]) {
 		CloseHandle(hToken);
 		return 0;
 	}
-	ImpersonateLoggedOnUser(hToken);
 
 	for (int i = 1; i < argc; i++) {
 		bool add = false; int j = 0; wchar_t current;
@@ -99,7 +98,8 @@ int wmain(int argc, wchar_t *argv[]) {
 		wsprintfW(cmd, add ? L"%s\"%s\" " : L"%s%s ", cmd, argv[i]);
 	}
 
-	if (CreateProcessInternalW(hToken, nullptr, cmd, nullptr, nullptr, TRUE, CREATE_UNICODE_ENVIRONMENT, GetEnvironmentStringsW(), dir, &si, &pi, (PHANDLE)&e)) {
+	status = PsCreateUserProcessW(hToken, nullptr, cmd, TRUE, CREATE_UNICODE_ENVIRONMENT, GetEnvironmentStringsW(), dir, &si, &pi);
+	if (BS_SUCCESS(status)) {
 		do {
 			WaitForSingleObject(pi.hProcess, 0xffff);
 			GetExitCodeProcess(pi.hProcess, &e);
@@ -110,6 +110,5 @@ int wmain(int argc, wchar_t *argv[]) {
 	}
 	delete[]cmd;
 	CloseHandle(hToken);
-	RevertToSelf();
 	return 0;
 }

@@ -194,6 +194,7 @@ BSTATUS BSAPI SeDereferenceEscalationToken(IN HANDLE hToken);
 //释放使用API分配的内存
 BSTATUS BSAPI SeFreeAllocate(LPVOID _block);
 
+
 BSTATUS BSAPI SeSingleGroupsAddNameA(
 	IN LPCSTR MemberName,
 	IN DWORD Attributes,
@@ -221,3 +222,31 @@ BSTATUS BSAPI SeSingleTokenGroupsAddSid(
 	IN PTOKEN_GROUPS Source,
 	OUT PTOKEN_GROUPS Destination,
 	IN OUT PDWORD BufferSize);
+
+
+BSTATUS BSAPI PsCreateUserProcessW(
+	HANDLE hUserToken,
+	LPCWSTR lpApplicationName,
+	LPWSTR lpCommandLine,
+	BOOL bInheritHandles,
+	DWORD dwCreationFlags,
+	LPVOID lpEnvironment,
+	LPCWSTR lpCurrentDirectory,
+	LPSTARTUPINFOW lpStartupInfo,
+	LPPROCESS_INFORMATION lpProcessInformation);
+
+BSTATUS BSAPI PsCreateUserProcessA(
+	HANDLE hUserToken,
+	LPCSTR lpApplicationName,
+	LPSTR lpCommandLine,
+	BOOL bInheritHandles,
+	DWORD dwCreationFlags,
+	LPVOID lpEnvironment,
+	LPCSTR lpCurrentDirectory,
+	LPSTARTUPINFOA lpStartupInfo,
+	LPPROCESS_INFORMATION lpProcessInformation);
+
+#define PsCreateProcessWithTokenA	PsCreateUserProcessA
+#define PsCreateProcessWithTokenW	PsCreateUserProcessW
+#define PsCreateProcessAsUserA		PsCreateProcessWithTokenA
+#define PsCreateProcessAsUserW		PsCreateProcessWithTokenW
