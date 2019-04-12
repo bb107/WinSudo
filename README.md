@@ -17,12 +17,15 @@ sudo.exe 程序名 参数...
 ```
 
 ## defects  (缺陷)
-* **Cannot inherit the current console window under Windows7**
-* **Windows7 下无法继承当前控制台窗口**
+* ~~**Cannot inherit the current console window under Windows7 (issue #1)**~~
+* ~~**Windows7 下无法继承当前控制台窗口 (issue #1)**~~
 * **Process need to be elevated**
 * **进程需要提升**
 
 ## Project Features (项目特点)
+* **Can inherit the current console window. Thanks for the help @Mattiwatti**
+* **感谢@Mattiwatti 提供的帮助,控制台不能继承的问题已经修复.**
+
 * All enabled privileges are enabled by default
 * 默认开启所有能启用的特权
 
@@ -43,10 +46,12 @@ Provide APIs such as creating access tokens.</br>
 Create a process with local system permissions using the PrivilegeHelps library.</br>
 使用PrivilegeHelps库创建具有本地系统权限的进程
 * cmder</br>
-The process created by the `CreateProcessWithTokenW` function assigns a new console by default, and the cmder will reattach the original console to achieve in-place promotion.</br>
+~~The process created by the `CreateProcessWithTokenW` function assigns a new console by default, and the cmder will reattach the original console to achieve in-place promotion.</br>
 `CreateProcessWithTokenW`函数创建的进程默认分配新控制台,cmder将重新附加原来的控制台,以实现原地提升.</br></br>
 However, the standard output handle cannot be copied under Windows 7, and the additional source console cannot be implemented.</br>
-但是,在Windows7下无法复制标准输出句柄,不能实现附加源控制台.
+但是,在Windows7下无法复制标准输出句柄,不能实现附加源控制台.~~</br>
+Removed.</br>
+已移除
 
 ## Important function description (重要函数说明)
 ```
