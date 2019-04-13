@@ -6,6 +6,7 @@ Execute commands as local system.</br>
 **此代码仅用于学习交流,不得用于制作恶意软件.**
 
 [![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/996icu/996.ICU/blob/master/LICENSE)
+[![HitCount](http://hits.dwyl.io/bb107/WinSudo.svg)](http://hits.dwyl.io/bb107/WinSudo)
 
 **Warning: Please use this program with caution, especially calling the PrivilegeHelps library.**</br>
 **警告:请谨慎使用本程序,尤其是调用PrivilegeHelps库.**
