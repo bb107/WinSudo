@@ -56,18 +56,18 @@ BSTATUS BSAPI PsCreateUserProcessA(
 	if (!BS_SUCCESS(status))return status;
 
 	if (sizeof(DWORD) != SeQueryInformationToken(hUserToken, TokenSessionId, &dwSessionId)) {
-		SeDereferenceEscalationToken(tmp);
+		CloseHandle(tmp);
 		return BSTATUS_UNSUCCESSFUL;
 	}
 	status = SeSetInformationToken(hUserToken, TokenSessionId, dwSessionId, sizeof(DWORD));
 	SeFreeAllocate(dwSessionId);
 	if (!BS_SUCCESS(status)) {
-		SeDereferenceEscalationToken(tmp);
+		CloseHandle(tmp);
 		return BSTATUS_UNSUCCESSFUL;
 	}
 	RevertToSelf();
 	ImpersonateLoggedOnUser(tmp);
-	SeDereferenceEscalationToken(tmp);
+	CloseHandle(tmp);
 
 	BOOL ret = CreateProcessInternalA(
 		hUserToken,
@@ -108,7 +108,7 @@ BSTATUS BSAPI PsCreateUserProcessW(
 	BSTATUS status = SeEnablePrivilegesToken(&tmp, privs);
 	if (!BS_SUCCESS(status))return status;
 	if (sizeof(DWORD) != SeQueryInformationToken(hUserToken, TokenSessionId, &dwSessionId)) {
-		SeDereferenceEscalationToken(tmp);
+		CloseHandle(tmp);
 		return BSTATUS_UNSUCCESSFUL;
 	}
 	status = SeSetInformationToken(hUserToken, TokenSessionId, dwSessionId, sizeof(DWORD));
@@ -119,7 +119,7 @@ BSTATUS BSAPI PsCreateUserProcessW(
 	}
 	RevertToSelf();
 	ImpersonateLoggedOnUser(tmp);
-	SeDereferenceEscalationToken(tmp);
+	CloseHandle(tmp);
 
 	BOOL ret = CreateProcessInternalW(
 		hUserToken,
