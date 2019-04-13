@@ -269,8 +269,8 @@ BSTATUS BSAPI SeCreateUserTokenExA(
 		else {
 			tp = new TOKEN_PRIVILEGES; RtlZeroMemory(tp, sizeof(TOKEN_PRIVILEGES));
 		}
-		SetSecurityDescriptorGroup(&sd, tpg.PrimaryGroup, TRUE);
-		SetSecurityDescriptorOwner(&sd, tu.User.Sid, TRUE);
+		//SetSecurityDescriptorGroup(&sd, tpg.PrimaryGroup, TRUE);
+		//SetSecurityDescriptorOwner(&sd, to.Owner, TRUE);
 	}
 	catch (BSTATUS Exception) {
 		if (tu.User.Sid)delete[]tu.User.Sid;

@@ -19,7 +19,7 @@ BSTATUS BSAPI RtlTokenPrivilegesToPrivilegeValue(IN PTOKEN_PRIVILEGES tp, IN BOO
 			if (priv == tp->Privileges[j].Luid) {
 				count++;
 				if (EnabledOnly ? tp->Privileges[j].Attributes&SE_PRIVILEGE_ENABLED : true)
-					*privileges &= ((PRIVILEGE_VALUE)1 << i);
+					*privileges |= ((PRIVILEGE_VALUE)1 << i);
 				break;
 			}
 		}

@@ -1,10 +1,9 @@
+#undef UNICODE
 #include <Windows.h>
 #include <cstdio>
-#include <ctime>
 #include "../PrivilegeHelps/bsdef.h"
-#include "../PrivilegeHelps/Native.h"
 
-int wmain(int argc, wchar_t *argv[]) {
+int main(int argc, char *argv[]) {
 	if (argc <= 1) {
 		printf("usage: sudo [program] [parameters...]\n");
 		return 0;
@@ -71,13 +70,13 @@ int wmain(int argc, wchar_t *argv[]) {
 		return 0;
 	}
 
-	STARTUPINFOW si = { 0 }; PROCESS_INFORMATION pi; DWORD e = 0;
-	wchar_t *cmd, dir[1000]; int len = 0;
-	GetCurrentDirectoryW(1000, dir);
-	for (int i = 1; i < argc; i++) len += wcslen(argv[i]);
+	STARTUPINFOA si = { 0 }; PROCESS_INFORMATION pi; DWORD e = 0;
+	char *cmd, dir[1000]; int len = 0;
+	GetCurrentDirectoryA(1000, dir);
+	for (int i = 1; i < argc; i++) len += strlen(argv[i]);
 	len += 1000 + argc;
-	cmd = new wchar_t[len];
-	RtlZeroMemory(cmd, sizeof(wchar_t)*len);
+	cmd = new char[len];
+	RtlZeroMemory(cmd, sizeof(char)*len);
 
 	ProcessIdToSessionId(GetCurrentProcessId(), &e);
 	status = SeSetInformationToken(hToken, TokenSessionId, &e, sizeof(DWORD));
@@ -87,18 +86,18 @@ int wmain(int argc, wchar_t *argv[]) {
 	}
 
 	for (int i = 1; i < argc; i++) {
-		bool add = false; int j = 0; wchar_t current;
+		bool add = false; int j = 0; char current;
 		while (true) {
 			current = *(argv[i] + j++);
 			if (!current)break;
-			if (current == L' ') {
+			if (current == ' ') {
 				add = true; break;
 			}
 		}
-		wsprintfW(cmd, add ? L"%s\"%s\" " : L"%s%s ", cmd, argv[i]);
+		wsprintfA(cmd, add ? "%s\"%s\" " : "%s%s ", cmd, argv[i]);
 	}
 
-	status = PsCreateUserProcessW(hToken, nullptr, cmd, TRUE, CREATE_UNICODE_ENVIRONMENT, GetEnvironmentStringsW(), dir, &si, &pi);
+	status = PsCreateUserProcessA(hToken, nullptr, cmd, TRUE, 0, 0, dir, &si, &pi);
 	if (BS_SUCCESS(status)) {
 		do {
 			WaitForSingleObject(pi.hProcess, 0xffff);

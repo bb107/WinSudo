@@ -68,7 +68,7 @@ NTSTATUS __declspec(naked) NTAPI NtDuplicateToken(
 }
 
 
-LPCSTR module = "kernel32.dll";
+LPCSTR module = "kernelbase.dll";
 LPCSTR f_CreateProcessInternalW = "CreateProcessInternalW";
 BOOL __declspec(naked) WINAPI CreateProcessInternalW(
 	_In_opt_ HANDLE hUserToken,
@@ -95,7 +95,7 @@ BOOL __declspec(naked) WINAPI CreateProcessInternalW(
 }
 
 LPCSTR f_CreateProcessInternalA = "CreateProcessInternalA";
-BOOL WINAPI CreateProcessInternalA(
+BOOL __declspec(naked) WINAPI CreateProcessInternalA(
 	_In_opt_ HANDLE hUserToken,
 	_In_opt_ LPCSTR lpApplicationName,
 	_Inout_opt_ LPSTR lpCommandLine,
