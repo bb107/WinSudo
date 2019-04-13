@@ -65,7 +65,7 @@ SeCreateUserTokenExA的简化版,在内部调用了它
 
 SeEnablePrivilegesToken
 Create a new token with the specified privilege, the other information is consistent with the source token.
-创建一个指定特权的新令牌,其他信息与源令牌一致
+创建一个指定特权的新令牌,其他信息与源令牌一致.
 
 RtlTokenPrivilegesToPrivilegeValue
 Convert the TOKEN_PRIVILEGES structure to a PRIVILEGE_VALUE 64-bit value.
@@ -82,6 +82,25 @@ You will get a copy of the elevated token, which you need to call SeDereferenceE
 SeDereferenceEscalationToken
 Close a handle with the Win32 CloseHandle and NT NtClose functions.
 关闭一个句柄,同Win32 CloseHandle 和 NT NtClose函数.
+
+SeSingleGroupsAddNameA
+SeSingleGroupsAddSid
+Modify the properties of a single group member in the GROUPS structure or add new member to the structure.
+修改GROUPS结构中单个组成员的属性或添加新成员到结构中.
+
+SeSingleTokenGroupsAddNameA
+SeSingleTokenGroupsAddSid
+Modify the properties of a single group member in the TOKEN_GROUPS structure or add new members to the structure.
+修改TOKEN_GROUPS结构中单个组成员的属性或添加新成员到结构中.
+
+PsCreateUserProcessA
+PsCreateUserProcessW
+Create a new process with the specified token, the new process will inherit the current console, and the new console can be assigned via dwFlags.
+使用指定令牌创建新进程,新的进程将继承当前控制台,可以通过dwFlags分配新控制台.
+
+SeFreeAllocate
+Frees the memory returned by the SeQueryInformationToken, SeReferenceUserNameA, SeReferenceSidA functions.
+释放由 SeQueryInformationToken, SeReferenceUserNameA, SeReferenceSidA 函数返回的内存.
 ```
 
 ## Screenshot of the program running (程序运行的截图)
