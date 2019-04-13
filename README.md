@@ -86,3 +86,6 @@ Close a handle with the Win32 CloseHandle and NT NtClose functions.
 
 ## Screenshot of the program running (程序运行的截图)
 ![alt text](screenshots/sudo.png?raw=true "sudo")
+
+* Add TrustedInstaller Permission
+![alt text](screenshots/sudo2.png?raw=true "sudo2")
