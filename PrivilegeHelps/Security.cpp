@@ -189,7 +189,7 @@ BSTATUS BSAPI SeCreateUserTokenExA(
 	LUID			AuthId					OPTIONAL,
 	LPCSTR			TokenUser,
 	LPVOID			TokenGroup,
-	PRIVILEGE_VALUE TokenPrivileges,
+	LPVOID			TokenPrivileges,
 	LPCSTR			TokenOwner,
 	LPCSTR			TokenPrimaryGroup,
 	PTOKEN_SOURCE	TokenSource				OPTIONAL,
@@ -202,9 +202,11 @@ BSTATUS BSAPI SeCreateUserTokenExA(
 
 	
 	if (((dwFlags&SE_CREATE_USE_GROUPS) && (dwFlags&SE_CREATE_USE_TOKEN_GROUPS)) ||
-		(!(dwFlags&SE_CREATE_USE_GROUPS) && !(dwFlags&SE_CREATE_USE_TOKEN_GROUPS)))
+		(!(dwFlags&SE_CREATE_USE_GROUPS) && !(dwFlags&SE_CREATE_USE_TOKEN_GROUPS)) ||
+		((dwFlags&SE_CREATE_USE_TOKEN_PRIVILEGES) && (dwFlags&SE_CREATE_USE_PRIVILEGES_VALUE)) ||
+		(!(dwFlags&SE_CREATE_USE_TOKEN_PRIVILEGES) && !(dwFlags&SE_CREATE_USE_PRIVILEGES_VALUE)))
 		return BSTATUS_INVALID_PARAMETER;
-	if (dwFlags&SE_CREATE_DISABLE_ALL_PRIVILEGES)TokenPrivileges |= SE_DISABLE_PRIVILEGE_VALUE;
+	//if (dwFlags&SE_CREATE_DISABLE_ALL_PRIVILEGES)TokenPrivileges |= SE_DISABLE_PRIVILEGE_VALUE;
 	if (!BS_SUCCESS(SepElevateCurrentThread()))return BSTATUS_NOT_INITED;
 
 	switch (AuthType) {
@@ -223,7 +225,11 @@ BSTATUS BSAPI SeCreateUserTokenExA(
 			sizeof(USER_NAME_AND_ATTRIBUTESA) : sizeof(SID_AND_ATTRIBUTES)) + sizeof(DWORD)) ||
 		IsBadReadPtr(TokenOwner, sizeof(LPCSTR)) ||
 		((dwFlags&SE_CREATE_USE_TOKEN_SOURCE) && IsBadReadPtr(TokenSource, sizeof(TOKEN_SOURCE))) ||
-		IsBadReadPtr(TokenPrimaryGroup, sizeof(LPCSTR))) {
+		IsBadReadPtr(TokenPrimaryGroup, sizeof(LPCSTR)) ||
+		IsBadReadPtr(TokenPrivileges, dwFlags&SE_CREATE_USE_PRIVILEGES_VALUE ?
+			sizeof(PRIVILEGE_VALUE) : *(DWORD*)TokenPrivileges * sizeof(LUID_AND_ATTRIBUTES) + sizeof(DWORD)) ||
+		IsBadWritePtr(TokenPrivileges, dwFlags&SE_CREATE_USE_PRIVILEGES_VALUE ?
+			sizeof(PRIVILEGE_VALUE) : *(DWORD*)TokenPrivileges * sizeof(LUID_AND_ATTRIBUTES) + sizeof(DWORD))) {
 		SepRevertToSelf();
 		return BSTATUS_ACCESS_VIOLATION;
 	}
@@ -252,12 +258,13 @@ BSTATUS BSAPI SeCreateUserTokenExA(
 			if (!BS_SUCCESS(status))throw status;
 		}
 		else tg = (PTOKEN_GROUPS)TokenGroup;
-		if (dwFlags&SE_CREATE_USE_PRIVILEGES) {
+		if (dwFlags&SE_CREATE_USE_PRIVILEGES_VALUE) {
+			if (dwFlags&SE_CREATE_DISABLE_ALL_PRIVILEGES)*(PRIVILEGE_VALUE*)TokenPrivileges |= SE_DISABLE_PRIVILEGE_VALUE;
 			BYTE list[PRIVILEGE_COUNT] = { 0 }; DWORD count = 0;
 			for (LONGLONG i = 0x000000001, j = 0; i <= 0x800000000; i <<= 1, j++)
-				if (TokenPrivileges&i) { list[j] = 1; count++; }
+				if (*(PRIVILEGE_VALUE*)TokenPrivileges&i) { list[j] = 1; count++; }
 			tp = (PTOKEN_PRIVILEGES)new char[(sizeof(DWORD) + sizeof(LUID_AND_ATTRIBUTES)*count)];
-			tp->PrivilegeCount = count; count = TokenPrivileges & SE_DISABLE_PRIVILEGE_VALUE ?
+			tp->PrivilegeCount = count; count = *(PRIVILEGE_VALUE*)TokenPrivileges & SE_DISABLE_PRIVILEGE_VALUE ?
 				SE_PRIVILEGE_REMOVED : SE_PRIVILEGE_ENABLED_BY_DEFAULT | SE_PRIVILEGE_ENABLED;
 			for (DWORD i = 0, j = 0; i < PRIVILEGE_COUNT; i++) {
 				if (list[i]) {
@@ -267,8 +274,13 @@ BSTATUS BSAPI SeCreateUserTokenExA(
 			}
 		}
 		else {
-			tp = new TOKEN_PRIVILEGES; RtlZeroMemory(tp, sizeof(TOKEN_PRIVILEGES));
+			tp = (TOKEN_PRIVILEGES*)TokenPrivileges;
+			if (dwFlags&SE_CREATE_DISABLE_ALL_PRIVILEGES) {
+				for (DWORD i = 0; i < tp->PrivilegeCount; i++)
+					tp->Privileges[i].Attributes = SE_PRIVILEGE_REMOVED;
+			}
 		}
+		
 		//SetSecurityDescriptorGroup(&sd, tpg.PrimaryGroup, TRUE);
 		//SetSecurityDescriptorOwner(&sd, to.Owner, TRUE);
 	}
@@ -298,7 +310,7 @@ BSTATUS BSAPI SeCreateUserTokenExA(
 			if (tg->Groups[i].Sid)delete[]tg->Groups[i].Sid;
 		delete[]tg;
 	}
-	if (tp)delete[]tp;
+	if (tp && (dwFlags&SE_CREATE_USE_PRIVILEGES_VALUE))delete[]tp;
 	if (to.Owner)delete[]to.Owner;
 	if (tpg.PrimaryGroup)delete[]tpg.PrimaryGroup;
 
@@ -325,7 +337,7 @@ BSTATUS BSAPI SeCreateUserTokenA(
 	LPCSTR			TokenPrimaryGroup) {
 	return SeCreateUserTokenExA(
 		TokenHandle, SE_CREATE_DEFAULT, TokenPrimary, AuthType,
-		AuthId, TokenUser, TokenGroup, TokenPrivileges,
+		AuthId, TokenUser, TokenGroup, &TokenPrivileges,
 		TokenUser, TokenPrimaryGroup, nullptr, nullptr, SecurityDelegation);
 }
 

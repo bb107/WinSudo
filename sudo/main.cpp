@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
 		System, { 0 },
 		"system",
 		tg,
-		priv,
+		&priv,
 		//argv[1],
 		"system",
 		"administrators",

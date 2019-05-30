@@ -98,7 +98,11 @@ typedef LONGLONG PRIVILEGE_VALUE, *PPRIVILEGE_VALUE;
 
 
 //SeCreateUserTokenEx dwFlags:
-#define SE_CREATE_USE_PRIVILEGES						0x00000001	//表示添加指定的特权, 忽略此标识将创建一个无任何特权的令牌
+
+//特权标识:(表示添加指定的特权, 互不兼容, 必选)
+#define SE_CREATE_USE_PRIVILEGES_VALUE					0x00000001	//表示 TokenPrivileges 参数是指向 PRIVILEGE_VALUE 的指针
+#define SE_CREATE_USE_TOKEN_PRIVILEGES					0x20000000	//表示 TokenPrivileges 参数是指向 TOKEN_PRIVILEGES 的指针
+#define SE_CREATE_USE_PRIVILEGES	SE_CREATE_USE_PRIVILEGES_VALUE
 
 //下面的标识二选一, 否则返回 BSTATUS_INVALID_PARAMETER
 #define SE_CREATE_USE_GROUPS							0x00000002	//表示 TokenGroup 参数类型是 PGROUPS
@@ -133,7 +137,7 @@ BSTATUS BSAPI SeCreateUserTokenExA(
 	LUID			AuthId					OPTIONAL,	//AuthType 为 Other 时需要此参数
 	LPCSTR			TokenUser,							//令牌的用户名
 	LPVOID			TokenGroup,							//指针类型由dwFlags决定
-	PRIVILEGE_VALUE TokenPrivileges,					//特权常数的组合
+	LPVOID			TokenPrivileges,					//指针类型由dwFlags决定
 	LPCSTR			TokenOwner,							//令牌所有者用户名
 	LPCSTR			TokenPrimaryGroup,					//令牌主用户组名
 	PTOKEN_SOURCE	TokenSource				OPTIONAL,	//令牌来源

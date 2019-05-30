@@ -22,9 +22,6 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\cmder\cmder.vcxproj">
-      <Project>{fe91d401-3079-44d8-9d8e-295ae3d23650}</Project>
-    </ProjectReference>
     <ProjectReference Include="..\PrivilegeHelps\PrivilegeHelps.vcxproj">
       <Project>{fcf04759-02e6-483b-9b54-71b0c6865971}</Project>
     </ProjectReference>

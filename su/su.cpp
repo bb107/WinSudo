@@ -105,8 +105,8 @@ int main(int argc, char*argv[]) {
 
 	//TOKEN_GROUPS and PRIVILEGE_VALUE
 	HANDLE hToken;
-	status = SeReferenceProcessPrimaryToken(GetCurrentProcessId(), &hToken);
-	if (!BS_SUCCESS(status)) {
+
+	if (!BS_SUCCESS(status = SeReferenceProcessPrimaryToken(GetCurrentProcessId(), &hToken))) {
 		printf("0x%08X|su: permission denied.\n", status);
 		return 1;
 	}
@@ -169,14 +169,14 @@ int main(int argc, char*argv[]) {
 		DWORD count = 0, dwLength = 0; PLUID luid_list = nullptr;
 		if (!user) {
 			printf("su: invalid user name.\n");
-			throw;
+			throw 1;
 		}
 
 		status = SeEnumLogonSessionsLuid(&count, luid_list, &dwLength);
 		if (!BS_SUCCESS(status)) {
 			printf("0x%08X|su: failed.\n", status);
 			SeFreeAllocate(user);
-			throw;
+			throw 2;
 		}
 		luid_list = new LUID[count + 1];
 		status = SeEnumLogonSessionsLuid(&count, luid_list, &dwLength);
@@ -184,7 +184,7 @@ int main(int argc, char*argv[]) {
 			printf("0x%08X|su: failed.\n", status);
 			SeFreeAllocate(user);
 			delete[]luid_list;
-			throw;
+			throw 3;
 		}
 
 		for (DWORD i = 0; i < count; i++) {
@@ -203,11 +203,13 @@ int main(int argc, char*argv[]) {
 			SeFreeLogonSessionData(lsd);
 		}
 		SeFreeAllocate(user);
-		delete[]luid_list;		
+		delete[]luid_list;
 	}
 	catch (...) {
-		if (list.empty())SeFreeAllocate(token_groups);
-		else delete[]token_groups;
+		if (list.empty())
+			SeFreeAllocate(token_groups);
+		else
+			delete[]token_groups;
 	}
 
 	status = SeCreateUserTokenExA(
@@ -217,7 +219,7 @@ int main(int argc, char*argv[]) {
 		Other, session,
 		user_name,
 		token_groups,
-		privilege_value,
+		&privilege_value,
 		token_owner,
 		token_primary_group,
 		nullptr, nullptr,
