@@ -239,7 +239,7 @@ int main(int argc, char*argv[]) {
 	}
 
 	STARTUPINFOA si = { 0 }; PROCESS_INFORMATION pi;
-	char *cmd, dir[1000]; DWORD len = 0;
+	char *cmd, dir[1000]; size_t len = 0;
 	GetCurrentDirectoryA(1000, dir);
 
 	if (start_of_program == WORD(-1)) {
@@ -272,7 +272,7 @@ int main(int argc, char*argv[]) {
 		if (WaitSubProcess) {
 			do {
 				WaitForSingleObject(pi.hProcess, 0xffff);
-				GetExitCodeProcess(pi.hProcess, &len);
+				GetExitCodeProcess(pi.hProcess, (LPDWORD)&len);
 			} while (len == STILL_ACTIVE);
 		}
 	}

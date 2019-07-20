@@ -9,7 +9,7 @@ LPCSTR f_NtDuplicateObject = "NtDuplicateObject";
 LPCSTR f_RtlNtStatusToDosError = "RtlNtStatusToDosError";
 LPCSTR f_NtDuplicateToken = "NtDuplicateToken";
 
-NTSTATUS __declspec(naked) NTAPI NtCreateToken(
+NTSTATUS NTAPI NtCreateToken(
 	PHANDLE TokenHandle,
 	ACCESS_MASK DesiredAccess,
 	LPVOID ObjectAttributes,
@@ -23,14 +23,15 @@ NTSTATUS __declspec(naked) NTAPI NtCreateToken(
 	PTOKEN_PRIMARY_GROUP TokenPrimaryGroup,
 	PTOKEN_DEFAULT_DACL TokenDefaultDacl,
 	PTOKEN_SOURCE TokenSource) {
-	__asm {
-		push f_NtCreateToken;
-		call GetNtProcAddress;
-		jmp eax;
-	}
+	return reinterpret_cast<NTSTATUS(NTAPI*)(PHANDLE, ACCESS_MASK, LPVOID, TOKEN_TYPE, PLUID,
+		PLARGE_INTEGER, PTOKEN_USER, PTOKEN_GROUPS, PTOKEN_PRIVILEGES,
+		PTOKEN_OWNER, PTOKEN_PRIMARY_GROUP, PTOKEN_DEFAULT_DACL, PTOKEN_SOURCE)>(GetNtProcAddress(f_NtCreateToken))(
+			TokenHandle, DesiredAccess, ObjectAttributes, TokenType, AuthenticationId,
+			ExpirationTime, TokenUser, TokenGroups, TokenPrivileges, TokenOwner,
+			TokenPrimaryGroup, TokenDefaultDacl, TokenSource);
 }
 
-NTSTATUS __declspec(naked) NTAPI NtDuplicateObject(
+NTSTATUS NTAPI NtDuplicateObject(
 	IN HANDLE               SourceProcessHandle,
 	IN HANDLE               SourceHandle,
 	IN HANDLE               TargetProcessHandle,
@@ -38,39 +39,29 @@ NTSTATUS __declspec(naked) NTAPI NtDuplicateObject(
 	IN ACCESS_MASK          DesiredAccess OPTIONAL,
 	IN BOOLEAN              InheritHandle,
 	IN ULONG                Options) {
-	__asm {
-		push f_NtDuplicateObject;
-		call GetNtProcAddress;
-		jmp eax;
-	}
+	return reinterpret_cast<NTSTATUS(NTAPI*)(HANDLE, HANDLE, HANDLE, PHANDLE, ACCESS_MASK, BOOLEAN, LONG)>(GetNtProcAddress(f_NtDuplicateObject))
+		(SourceProcessHandle, SourceHandle, TargetProcessHandle, TargetHandle, DesiredAccess, InheritHandle, Options);
 }
 
-DWORD __declspec(naked) NTAPI RtlNtStatusToDosError(NTSTATUS status) {
-	__asm {
-		push f_RtlNtStatusToDosError;
-		call GetNtProcAddress;
-		jmp eax;
-	}
+DWORD NTAPI RtlNtStatusToDosError(NTSTATUS status) {
+	return reinterpret_cast<DWORD(NTAPI*)(NTSTATUS)>(GetNtProcAddress(f_RtlNtStatusToDosError))(status);
 }
 
-NTSTATUS __declspec(naked) NTAPI NtDuplicateToken(
+NTSTATUS NTAPI NtDuplicateToken(
 	HANDLE ExistingTokenHandle,
 	ACCESS_MASK DesiredAccess,
 	POBJECT_ATTRIBUTES ObjectAttributes,
 	BOOLEAN EffectiveOnly,
 	TOKEN_TYPE TokenType,
 	PHANDLE NewTokenHandle) {
-	__asm {
-		push f_NtDuplicateToken;
-		call GetNtProcAddress;
-		jmp eax;
-	}
+	return reinterpret_cast<NTSTATUS(NTAPI*)(HANDLE, ACCESS_MASK, POBJECT_ATTRIBUTES, BOOLEAN, TOKEN_TYPE, PHANDLE)>
+		(GetNtProcAddress(f_NtDuplicateToken))(ExistingTokenHandle, DesiredAccess, ObjectAttributes, EffectiveOnly, TokenType, NewTokenHandle);
 }
 
 
 LPCSTR module = "kernelbase.dll";
 LPCSTR f_CreateProcessInternalW = "CreateProcessInternalW";
-BOOL __declspec(naked) WINAPI CreateProcessInternalW(
+BOOL WINAPI CreateProcessInternalW(
 	_In_opt_ HANDLE hUserToken,
 	_In_opt_ LPCWSTR lpApplicationName,
 	_Inout_opt_ LPWSTR lpCommandLine,
@@ -84,18 +75,15 @@ BOOL __declspec(naked) WINAPI CreateProcessInternalW(
 	_Out_ LPPROCESS_INFORMATION lpProcessInformation,
 	_Outptr_opt_ PHANDLE hRestrictedUserToken
 ) {
-	__asm {
-		push module;
-		call GetModuleHandleA;
-		push f_CreateProcessInternalW;
-		push eax;
-		call GetProcAddress;
-		jmp eax;
-	}
+	return reinterpret_cast<BOOL(WINAPI*)(HANDLE, LPCWSTR, LPWSTR, LPSECURITY_ATTRIBUTES,
+		LPSECURITY_ATTRIBUTES, BOOL, DWORD, LPVOID, LPCWSTR, LPSTARTUPINFOW, LPPROCESS_INFORMATION, PHANDLE)>
+		(GetProcAddress(GetModuleHandleA(module), f_CreateProcessInternalW))(hUserToken, lpApplicationName,
+			lpCommandLine, lpProcessAttributes, lpThreadAttributes, bInheritHandles, dwCreationFlags, lpEnvironment,
+			lpCurrentDirectory, lpStartupInfo, lpProcessInformation, hRestrictedUserToken);
 }
 
 LPCSTR f_CreateProcessInternalA = "CreateProcessInternalA";
-BOOL __declspec(naked) WINAPI CreateProcessInternalA(
+BOOL WINAPI CreateProcessInternalA(
 	_In_opt_ HANDLE hUserToken,
 	_In_opt_ LPCSTR lpApplicationName,
 	_Inout_opt_ LPSTR lpCommandLine,
@@ -109,12 +97,9 @@ BOOL __declspec(naked) WINAPI CreateProcessInternalA(
 	_Out_ LPPROCESS_INFORMATION lpProcessInformation,
 	_Outptr_opt_ PHANDLE hRestrictedUserToken
 ) {
-	__asm {
-		push module;
-		call GetModuleHandleA;
-		push f_CreateProcessInternalA;
-		push eax;
-		call GetProcAddress;
-		jmp eax;
-	}
+	return reinterpret_cast<BOOL(WINAPI*)(HANDLE, LPCSTR, LPSTR, LPSECURITY_ATTRIBUTES,
+		LPSECURITY_ATTRIBUTES, BOOL, DWORD, LPVOID, LPCSTR, LPSTARTUPINFOA, LPPROCESS_INFORMATION, PHANDLE)>
+		(GetProcAddress(GetModuleHandleA(module), f_CreateProcessInternalA))(hUserToken, lpApplicationName,
+			lpCommandLine, lpProcessAttributes, lpThreadAttributes, bInheritHandles, dwCreationFlags, lpEnvironment,
+			lpCurrentDirectory, lpStartupInfo, lpProcessInformation, hRestrictedUserToken);
 }

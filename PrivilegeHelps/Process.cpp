@@ -2,11 +2,14 @@
 #include "Process.h"
 #include "Native.h"
 #include "Security.h"
+#pragma warning(disable:4302)
+#pragma warning(disable:4311)
+#pragma warning(disable:4312)
 
 const std::string Strupr(IN const char* buf) {
-	int len = strlen(buf) + 1;
+	size_t len = strlen(buf) + 1;
 	std::string tmp(len, 0);
-	for (int i = 0; i < len; i++)
+	for (size_t i = 0; i < len; i++)
 		tmp[i] = buf[i] >= 'a'&&buf[i] <= 'z' ? buf[i] - 0x20 : buf[i];
 	return tmp;
 }

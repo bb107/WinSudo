@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	STARTUPINFOA si = { 0 }; PROCESS_INFORMATION pi; DWORD e = 0;
-	char *cmd, dir[1000]; int len = 0;
+	char *cmd, dir[1000]; size_t len = 0;
 	GetCurrentDirectoryA(1000, dir);
 	for (int i = 1; i < argc; i++) len += strlen(argv[i]);
 	len += 1000 + argc;

@@ -461,7 +461,7 @@ BSTATUS BSAPI SeQueryLogonSessionInformation(IN PLUID luid, OUT PLOGON_SESSION_D
 	PSECURITY_LOGON_SESSION_DATA data;
 	if (!NT_SUCCESS(LsaGetLogonSessionData(luid, &data)))
 		return BSTATUS_UNSUCCESSFUL;
-	(*(DWORD*)_data) = (DWORD)data;
+	(*(PSECURITY_LOGON_SESSION_DATA*)_data) = data;
 	return BSTATUS_SUCCESS;
 }
 
@@ -610,7 +610,7 @@ BSTATUS BSAPI SeSingleGroupsAddSid(
 	}
 
 	if (dwSamePoint != -1) {
-		if ((DWORD)Source == (DWORD)Destination) {
+		if ((DWORD64)Source == (DWORD64)Destination) {
 			Source->NamesAndAttributes[dwSamePoint].Attributes = Attributes;
 			return BSTATUS_SUCCESS;
 		}
