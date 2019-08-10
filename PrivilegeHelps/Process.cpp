@@ -15,14 +15,13 @@ const std::string Strupr(IN const char* buf) {
 }
 #define strupr Strupr
 
-DWORD BSAPI PsGetProcessId(const char* szProcessName) {
+DWORD BSAPI PsGetProcessId(LPCSTR szProcessName) {
 	HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-	std::string pn = strupr((char*)szProcessName);
 	if (hSnapshot == INVALID_HANDLE_VALUE)	return 0;
-	PROCESSENTRY32 ps;
+	PROCESSENTRY32 ps = { sizeof(ps) };
 	if (!Process32First(hSnapshot, &ps))	return 0;
 	do {
-		if (!strcmp(strupr(ps.szExeFile).data(), pn.data())) {
+		if (!_stricmp(ps.szExeFile, szProcessName)) {
 			CloseHandle(hSnapshot);	return ps.th32ProcessID;
 		}
 	} while (Process32Next(hSnapshot, &ps));

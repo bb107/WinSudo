@@ -5,5 +5,5 @@
 #include <string>
 #include "bsdef.h"
 
-DWORD BSAPI PsGetProcessId(const char* szProcessName);
+DWORD BSAPI PsGetProcessId(LPCSTR szProcessName);
 

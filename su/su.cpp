@@ -19,7 +19,7 @@ usage: su [switchs] [options] [-c (program) (argvs...)]\n\
        -g option is group member information and can be added multiple.\n\
        examples:\n\
            su\n\
-           su -u administrator -o administrators -c cmd.exe\n\
+           su -u administrator -p administrators -c cmd.exe\n\
            su -u system -c reg query HKLM\\SAM\\SAM\n\
            su -g \"system mandatory level\" 0x67 0 -g administrators 0xf 0 -g everyone 0x1 0 -g \"authenticated users\" 0x1 0 -g S-0-123-456 0x1 1 -P 0xfffffffff\n\
 ";

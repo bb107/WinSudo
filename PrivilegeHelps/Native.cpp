@@ -59,7 +59,7 @@ NTSTATUS NTAPI NtDuplicateToken(
 }
 
 
-LPCSTR module = "kernelbase.dll";
+LPCSTR module = "kernel32.dll";
 LPCSTR f_CreateProcessInternalW = "CreateProcessInternalW";
 BOOL WINAPI CreateProcessInternalW(
 	_In_opt_ HANDLE hUserToken,
